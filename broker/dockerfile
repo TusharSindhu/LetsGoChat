@@ -1,0 +1,26 @@
+# --- Build Stage ---
+FROM golang:1.25.3-alpine AS builder
+
+WORKDIR /app
+
+# Copy go.mod/sum from the root
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy all source code
+COPY . .
+
+# Build the broker binary
+RUN go build -o /broker ./broker/broker.go
+
+# --- Final Stage ---
+FROM alpine:latest
+WORKDIR /root/
+
+# Copy only the compiled binary
+COPY --from=builder /broker .
+
+EXPOSE 50051
+
+# Run the broker
+CMD ["./broker"]

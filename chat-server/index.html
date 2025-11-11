@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LetsGoChat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white font-sans flex items-center justify-center min-h-screen">
+    <!-- 
+      Login Screen: This is shown first.
+      It's hidden once the user "logs in".
+    -->
+    <div id="login-screen" class="bg-gray-800 rounded-lg shadow-lg p-8 w-full max-w-md">
+        <h1 class="text-3xl font-bold mb-6 text-center text-cyan-400">Join Chat</h1>
+        <form id="login-form" class="flex flex-col gap-4">
+            <input 
+                type="text" 
+                id="username-input" 
+                autocomplete="off" 
+                class="bg-gray-600 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500" 
+                placeholder="Enter your username" 
+                required 
+            />
+            <button type="submit" class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-6 rounded-md transition duration-300">
+                Join
+            </button>
+        </form>
+    </div>
+
+    <!-- 
+      Chat Room: This is hidden by default.
+      It's shown after the user provides a username.
+    -->
+    <div id="chat-room" class="bg-gray-800 rounded-lg shadow-lg p-8 w-full max-w-2xl hidden">
+        <h1 class="text-3xl font-bold mb-6 text-center text-cyan-400">LetsGoChat</h1>
+        <div id="messages" class="h-96 overflow-y-auto mb-4 p-4 bg-gray-700 rounded-md border border-gray-600">
+            <!-- Messages will be appended here -->
+        </div>
+        <form id="chat-form" class="flex gap-4">
+            <input 
+                type="text" 
+                id="message-input" 
+                autocomplete="off" 
+                class="flex-grow bg-gray-600 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-cyan-500" 
+                placeholder="Type a message..." 
+            />
+            <button type="submit" class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-6 rounded-md transition duration-300">
+                Send
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const loginScreen = document.getElementById('login-screen');
+        const loginForm = document.getElementById('login-form');
+        const usernameInput = document.getElementById('username-input');
+        
+        const chatRoom = document.getElementById('chat-room');
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+        const messages = document.getElementById('messages');
+
+        let username = '';
+        let ws; // The WebSocket connection will be stored here
+
+        // --- 1. Handle the login form submission ---
+        loginForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            
+            username = usernameInput.value.trim();
+            
+            if (username) {
+                loginScreen.classList.add('hidden');
+                chatRoom.classList.remove('hidden');
+                connectWebSocket();
+            }
+        });
+
+        // --- 2. Handle the chat message form submission ---
+        chatForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const message = messageInput.value.trim();
+
+            if (message && ws) {
+                ws.send(username + ": " + message);
+                messageInput.value = '';
+            }
+        });
+
+        // --- 3. Function to connect to WebSocket ---
+        function connectWebSocket() {
+            // Dynamically build the WebSocket URL
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+
+            console.log(`Connecting to WebSocket at: ${wsUrl}`);
+            ws = new WebSocket(wsUrl);
+
+            // Fired when the connection is successfully opened
+            ws.onopen = function() {
+                console.log('WebSocket connection established.');
+                // Send the "joined" message to the server
+                ws.send(username + " has joined the chat.");
+            };
+
+            // Fired when a new message is received from the server
+            ws.onmessage = function(event) {
+                    const messageText = event.data;
+                    const messageElement = document.createElement('div');
+                    messageElement.textContent = messageText;
+                    
+                    // Style system messages (like 'join' or 'left') differently
+                    if (messageText.includes("joined") || messageText.includes("left")) {
+                        messageElement.classList.add('p-2', 'mb-2', 'italic', 'text-gray-400', 'text-center', 'w-full');
+                    } else {
+                        messageElement.classList.add('p-2', 'rounded-md', 'mb-2', 'bg-gray-600', 'w-fit');
+                    }
+                    
+                    messages.appendChild(messageElement);
+                    messages.scrollTop = messages.scrollHeight;
+                };
+
+            // Fired when the connection is closed
+            ws.onclose = function() {
+                console.log('WebSocket connection closed.');
+                // Display a "disconnected" message *only* to this user
+                const messageElement = document.createElement('div');
+                messageElement.textContent = "You have been disconnected.";
+                messageElement.classList.add('p-2', 'mb-2', 'italic', 'text-red-400', 'text-center', 'w-full');
+                messages.appendChild(messageElement);
+                messages.scrollTop = messages.scrollHeight;
+            };
+
+            // Fired if an error occurs
+            ws.onerror = function(error) {
+                console.error('WebSocket Error: ', error);
+            };
+        }
+    </script>
+</body>
+</html>

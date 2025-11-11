@@ -1,0 +1,28 @@
+# --- Build Stage ---
+FROM golang:1.25.3-alpine AS builder
+
+WORKDIR /app
+
+# Copy go.mod/sum from the root
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy all source code (this will include all sub-directories)
+COPY . .
+
+# Build the chat-server binary
+RUN go build -o /chat-server ./chat-server/main.go
+
+# --- Final Stage ---
+FROM alpine:latest
+WORKDIR /root/
+
+# Copy only the compiled binary from the builder stage
+COPY --from=builder /chat-server .
+# Copy the HTML file
+COPY ./chat-server/index.html .
+
+EXPOSE 8080
+
+# Run the chat server
+CMD ["./chat-server"]

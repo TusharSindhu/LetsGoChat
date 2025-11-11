@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package chat;
+
+option go_package = "github.com/TusharSindhu/LetsGoChat/grpcproto;grpcproto";
+
+service ChatService {
+  rpc BroadcastMessage(ChatMessage) returns (Empty); //Unary
+  rpc ReceiveMessages(Empty) returns (stream ChatMessage); //ServerSideStreaming
+}
+
+message ChatMessage {
+  bytes body = 1;
+}
+
+message Empty {} 

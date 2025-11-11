@@ -1,0 +1,19 @@
+services:
+  # The Chat Server (Frontend + WebSocket)
+  chat-server:
+    build:
+      context: .
+      dockerfile: chat-server/Dockerfile
+    ports:
+      - "80:8080"
+    depends_on:
+      - broker
+
+  # The gRPC Broker
+  broker:
+    build:
+      context: .
+      dockerfile: broker/Dockerfile
+    # No ports exposed to host, only to other containers
+    expose:
+      - "50051"

@@ -1,0 +1,28 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+
+# Go modules cache
+vendor/
+go.sum
+
+# VSCode and editor files
+.vscode/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Git files
+.git
+.gitignore
+
+# Logs and temp files
+*.log
+tmp/

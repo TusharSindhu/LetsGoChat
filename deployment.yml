@@ -1,0 +1,124 @@
+# --- Chat Broker Deployment ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: broker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: broker
+  template:
+    metadata:
+      labels:
+        app: broker
+    spec:
+      containers:
+      - name: broker
+        image: broker:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 50051
+
+---
+# --- Chat Broker Service ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: broker-svc
+spec:
+  selector:
+    app: broker
+  ports:
+    - protocol: TCP
+      port: 50051
+      targetPort: 50051
+  type: ClusterIP # Only reachable inside the cluster
+
+---
+# --- Chat Server Deployment ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-server
+spec:
+  # Start with 1 replica for our baseline test. HPA will scale this up.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chat-server
+  template:
+    metadata:
+      labels:
+        app: chat-server 
+    spec:
+      # Init container to wait for broker TCP port
+      initContainers:
+      - name: wait-for-broker
+        image: busybox
+        command:
+          - sh
+          - -c
+          - |
+            echo "Waiting for broker to accept TCP connections on port 50051..."
+            while ! nc -z broker 50051; do
+              echo "broker not ready, retrying in 2s..."
+              sleep 2
+            done
+            echo "broker is up!"
+      containers:
+      - name: chat-server
+        image: chat-server:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        env:
+        # Tell the chat server how to find the broker service
+        - name: BROKER_ADDR
+          value: "broker-svc:50051"
+        # This is key for the HPA: resource requests and limits.
+        resources:
+          requests:
+            cpu: "250m" # Request 0.25 of a CPU
+            memory: "64Mi"
+          limits:
+            cpu: "500m" # Limit to 0.5 of a CPU
+            memory: "128Mi"
+            
+---
+# --- Chat Server Service ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat-server-svc
+spec:
+  selector:
+    app: chat-server
+  ports:
+    - protocol: TCP
+      port: 80 # Expose port 80
+      targetPort: 8080 # Map to the container's port 8080
+  type: LoadBalancer
+
+---
+# --- Horizontal Pod Autoscaler ---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: chat-server-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: chat-server
+  # Start with 1, scale up to 10
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        # Target 50% CPU utilization
+        type: Utilization
+        averageUtilization: 50
