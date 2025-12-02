@@ -8,7 +8,6 @@
 
 # Go modules cache
 vendor/
-go.sum
 
 # VSCode and editor files
 .vscode/

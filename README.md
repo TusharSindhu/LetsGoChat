@@ -4,6 +4,9 @@ This project is a high-performance, real-time chat application built from scratc
 
 The system is engineered to handle thousands of concurrent WebSocket connections, with a custom-built gRPC pub/sub message broker decoupling the chat servers for seamless scaling. The entire application is containerized with Docker and ready for deployment on Kubernetes.
 
+![LogINScreen](img/GetINLetsGoChat.png)
+![LetsGoChatUI](img/LetsGoChatUI.png)
+
 ![Architecture Diagram](img/architecture.png)
 
 ## Key Features
